@@ -1,0 +1,212 @@
+
+
+:root {
+  color-scheme: light;
+  --paper: #fbfbfc;
+  --tint: #f0f2f4;
+  --ink: #1f2328;
+  --muted: #5a626c;
+  --line: #e1e4e8;
+  --field: #858d96;
+  --accent: #2a3fd1;
+  --ok: #1a7447;
+  --bad: #a3261d;
+  --sans: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --mono: ui-monospace, "Cascadia Mono", "SF Mono", Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.55 var(--sans); }
+main { max-width: 64rem; margin: 0 auto; padding: 1.5rem 1.5rem 5rem; }
+
+h1, h2, h3 { margin: 0; }
+h1 { font: 400 2rem/1.15 var(--serif); letter-spacing: -.01em; margin-bottom: 1.75rem; }
+h2 { font-size: 1rem; font-weight: 600; }
+
+.muted { color: var(--muted); }
+.grow { flex: 1; }
+.row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- nagłówek i nawigacja -------------------------------------------------- */
+
+.bar { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem 1rem; padding: .25rem 0 1.5rem; }
+.brand { font: 400 1.4rem/1 var(--serif); letter-spacing: -.01em; }
+.who { font-weight: 500; }
+
+nav { display: flex; gap: 1.75rem; margin-bottom: 2rem; border-bottom: 1px solid var(--line); overflow-x: auto; }
+
+/* ---- formularze ------------------------------------------------------------ */
+
+label { display: block; margin: 0 0 1.25rem; font-size: .85rem; color: var(--muted); }
+label.check { display: flex; align-items: center; gap: .65rem; font-size: 1rem; color: var(--ink); }
+
+input, select, textarea {
+  display: block; width: 100%; margin: 0; padding: .5rem 0 .45rem;
+  font: inherit; color: var(--ink); background: transparent;
+  border: 0; border-bottom: 1px solid var(--field); border-radius: 0;
+}
+label > input, label > select { margin-top: .1rem; }
+input[type=number] { max-width: 10rem; }
+input::placeholder, textarea::placeholder { color: #6b737c; }
+input:focus-visible, select:focus-visible {
+  outline: none; border-bottom-color: var(--accent); box-shadow: 0 1px 0 var(--accent);
+}
+textarea {
+  padding: .6rem .7rem; border: 1px solid var(--field); border-radius: 4px; resize: vertical;
+}
+textarea:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+input[type=checkbox] { width: 1.05rem; height: 1.05rem; margin: 0; padding: 0; accent-color: var(--ink); }
+input[type=checkbox]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; box-shadow: none; }
+input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 100px var(--paper) inset; -webkit-text-fill-color: var(--ink);
+}
+
+/* ---- przyciski ------------------------------------------------------------- */
+
+button {
+  font: inherit; font-size: .95rem; padding: .6rem 1.15rem; cursor: pointer;
+  color: var(--paper); background: var(--ink); border: 1px solid var(--ink); border-radius: 4px;
+  transition: background-color .12s, border-color .12s, color .12s;
+}
+button:hover:not(:disabled) { background: #3b424a; border-color: #3b424a; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+
+button.secondary { background: transparent; color: var(--ink); border-color: var(--field); }
+button.secondary:hover:not(:disabled) { background: transparent; border-color: var(--ink); }
+
+button.danger { background: transparent; color: var(--bad); border-color: #d6a19b; }
+button.danger:hover:not(:disabled) { background: #fbeceb; border-color: var(--bad); }
+
+button.link {
+  background: none; border: 0; padding: .5rem 0; color: var(--ink);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+button.link:hover:not(:disabled) { background: none; }
+
+/* Przyciski bez obramowania: akcje w tabeli, wylogowanie, usuwanie artykułu. */
+button.plain { padding: .25rem .45rem; color: var(--muted); background: transparent; border-color: transparent; }
+button.plain:hover:not(:disabled) { color: var(--ink); background: var(--tint); border-color: transparent; }
+button.plain.danger { color: var(--bad); border-color: transparent; }
+button.plain.danger:hover:not(:disabled) { color: var(--bad); background: #fbeceb; border-color: transparent; }
+
+button.tab {
+  padding: .6rem 0; margin-bottom: -1px; color: var(--muted); white-space: nowrap;
+  background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0;
+}
+button.tab:hover:not(:disabled) { color: var(--ink); background: none; border-color: transparent; }
+button.tab.active, button.tab.active:hover:not(:disabled) { color: var(--ink); border-bottom-color: var(--ink); }
+
+/* ---- komunikaty ------------------------------------------------------------ */
+
+.msg:empty { display: none; }
+.msg { margin-top: 1rem; padding: .15rem 0 .15rem .85rem; border-left: 3px solid var(--field); }
+.msg.error { border-color: var(--bad); color: var(--bad); }
+.msg.ok { border-color: var(--ok); color: var(--ok); }
+.msg.info { border-color: var(--accent); }
+.msg ul { margin: .4rem 0 0; padding-left: 1.1rem; }
+
+/* ---- logowanie i wymuszona zmiana hasła ------------------------------------- */
+
+.auth { max-width: 22rem; margin-top: 12vh; }
+.auth > p { margin: -.75rem 0 1.75rem; color: var(--muted); }
+
+/* ---- sekcje: nagłówek po lewej, treść po prawej ------------------------------- */
+
+.block {
+  display: grid; grid-template-columns: 12rem minmax(0, 30rem); column-gap: 3rem;
+  padding: 2rem 0 1rem; border-top: 1px solid var(--line);
+}
+.block:first-child { padding-top: 0; border-top: 0; }
+.block > h2 { grid-column: 1; grid-row: 1; }
+.block > :not(h2) { grid-column: 2; margin: 0 0 1rem; }
+.block > div:empty { display: none; }
+.block > button { justify-self: start; }
+
+.block.wide { grid-template-columns: minmax(0, 1fr); }
+.block.wide > h2 { grid-row: auto; margin-bottom: 1rem; }
+.block.wide > :not(h2) { grid-column: 1; }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1.25rem; }
+
+/* ---- artykuły --------------------------------------------------------------- */
+
+.post { padding: 1.75rem 0; border-top: 1px solid var(--line); }
+.post:first-child { padding-top: 0; border-top: 0; }
+.post h3 { font: 400 1.5rem/1.25 var(--serif); letter-spacing: -.005em; margin-bottom: .35rem; }
+.meta { display: flex; flex-wrap: wrap; gap: 0 1rem; margin: 0 0 1rem; font-size: .85rem; color: var(--muted); }
+.body { max-width: 66ch; margin: 0 0 1rem; font: 1.0625rem/1.65 var(--serif); white-space: pre-wrap; }
+.post > button:last-child { margin-left: -.55rem; }
+
+/* ---- hasło jednorazowe: jedyny mocny akcent --------------------------------- */
+
+.otp { margin: 0 0 2.5rem; padding: 1.5rem 1.75rem; background: var(--tint); border-left: 4px solid var(--accent); }
+.otp h2 { margin-bottom: .75rem; font-size: .95rem; font-weight: 500; color: var(--muted); }
+.otp p { margin: 0 0 .75rem; max-width: 52ch; }
+.otp p:last-of-type { margin-bottom: 1.25rem; color: var(--muted); }
+.otp code {
+  display: block; padding: 0; background: none; user-select: all;
+  font: 600 clamp(1.5rem, 5vw, 2.4rem)/1.25 var(--mono); letter-spacing: .14em;
+}
+
+code { padding: .1em .4em; background: var(--tint); border-radius: 3px; font: .9em var(--mono); overflow-wrap: anywhere; }
+
+/* ---- tabela użytkowników ---------------------------------------------------- */
+
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th {
+  padding: 0 1rem .6rem 0; text-align: left; white-space: nowrap;
+  font-size: .82rem; font-weight: 500; color: var(--muted); border-bottom: 1px solid var(--line);
+}
+td { padding: .6rem 1rem .6rem 0; vertical-align: middle; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+td:last-child, th:last-child { padding-right: 0; }
+td .row { gap: .1rem; flex-wrap: nowrap; }
+.sub { display: block; font-size: .82rem; color: var(--muted); }
+
+.tag { display: inline-flex; align-items: center; gap: .4rem; color: var(--ok); }
+.tag::before { content: ""; width: .45rem; height: .45rem; border-radius: 50%; background: currentColor; }
+.tag.bad { color: var(--bad); }
+
+/* ---- pozostałe -------------------------------------------------------------- */
+
+.out {
+  min-height: 3.5rem; margin: 0; padding: 1rem 1.1rem; overflow: auto;
+  background: var(--tint); border-radius: 4px; font: .85rem/1.5 var(--mono); white-space: pre-wrap;
+}
+.out:empty { display: none; }
+.qr { display: block; width: 200px; height: 200px; margin: 0 0 1rem; }
+
+dialog {
+  width: min(92vw, 24rem); padding: 1.75rem; color: var(--ink); background: var(--paper);
+  border: 0; border-radius: 8px; box-shadow: 0 24px 64px rgba(20, 24, 28, .22);
+}
+dialog::backdrop { background: rgba(31, 35, 40, .38); }
+dialog h2 { margin-bottom: 1.5rem; font: 400 1.35rem/1.2 var(--serif); }
+
+/* ---- wąskie ekrany ---------------------------------------------------------- */
+
+@media (max-width: 44rem) {
+  main { padding: 1rem 1.25rem 4rem; }
+  .block { grid-template-columns: minmax(0, 1fr); }
+  .block > h2 { grid-row: auto; margin-bottom: 1rem; }
+  .block > :not(h2) { grid-column: 1; }
+  .grid2 { grid-template-columns: minmax(0, 1fr); }
+  .auth { margin-top: 6vh; }
+  .bar button.plain { padding-left: 0; }
+
+  /* tabela użytkowników: każdy wiersz jako osobny blok, bez przewijania w bok */
+  thead { display: none; }
+  table, tbody, tr, td { display: block; }
+  tr { padding: .9rem 0; border-bottom: 1px solid var(--line); }
+  tr:last-child { border-bottom: 0; }
+  td, td:last-child { padding: .1rem 0; border: 0; }
+  td .row { flex-wrap: wrap; margin: .35rem 0 0 -.45rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button { transition: none; }
+}
