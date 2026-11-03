@@ -49,6 +49,25 @@ async function api(method, path, body) {
 
 // ---- logowanie ---------------------------------------------------------------
 
+// Pokazuje pozostały czas blokady konta i odblokowuje przycisk, gdy blokada wygaśnie.
+function lockCountdown(msg, button, secs) {
+  const end = Date.now() + secs * 1000;
+  button.disabled = true;
+  const tick = () => {
+    const left = Math.ceil((end - Date.now()) / 1000);
+    if (!msg.isConnected) return clearInterval(timer); // użytkownik opuścił ekran logowania
+    if (left <= 0) {
+      clearInterval(timer);
+      button.disabled = false;
+      return show(msg, 'info', 'Blokada wygasła. Możesz spróbować ponownie.');
+    }
+    show(msg, 'error', 'Konto jest zablokowane po zbyt wielu błędnych próbach. ' +
+      `Pozostały czas blokady: ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`);
+  };
+  const timer = setInterval(tick, 1000);
+  tick();
+}
+
 function renderLogin(notice) {
   state.me = null;
   state.otp = null;
@@ -56,18 +75,20 @@ function renderLogin(notice) {
   if (notice) show(msg, 'info', notice);
   const username = h('input', { autocomplete: 'username', required: true });
   const password = h('input', { type: 'password', autocomplete: 'current-password', required: true });
+  const submit = h('button', { type: 'submit' }, 'Zaloguj');
   app.replaceChildren(h('form', {
     class: 'auth',
     onsubmit: async (e) => {
       e.preventDefault();
       const r = await api('POST', '/login', { username: username.value, password: password.value });
       password.value = '';
+      if (r.data.error === 'account_locked') return lockCountdown(msg, submit, r.data.retry_after_secs);
       if (!r.ok) return show(msg, 'error', errBox(r));
       if (r.data.status === 'totp_required') return renderTotp();
       enterApp();
     },
   }, h('h1', {}, 'AuthLab'), field('Login', username), field('Hasło', password),
-  h('button', { type: 'submit' }, 'Zaloguj'), msg));
+  submit, msg));
   username.focus();
 }
 
@@ -384,6 +405,7 @@ function settingsCard(s) {
   const minLength = number(s.min_length, 8, 64);
   const maxAge = number(s.password_max_age_days, 0, 3650);
   const idle = number(s.session_idle_minutes, 1, 1440);
+  const maxAttempts = number(s.max_login_attempts, 1, 20);
   const noRepeats = h('input', { type: 'checkbox', checked: s.forbid_repeats });
   return h('form', {
     class: 'block',
@@ -394,14 +416,16 @@ function settingsCard(s) {
         forbid_repeats: noRepeats.checked,
         password_max_age_days: Number(maxAge.value),
         session_idle_minutes: Number(idle.value),
+        max_login_attempts: Number(maxAttempts.value),
       });
       if (r.ok) show(msg, 'ok', 'Ustawienia zapisane.'); else show(msg, 'error', errBox(r));
     },
-  }, h('h2', {}, 'Polityka haseł i sesji'),
+  }, h('h2', {}, 'Polityka haseł, sesji i logowania'),
   field('Minimalna długość hasła', minLength),
   h('label', { class: 'check' }, noRepeats, 'Zakaz 3 lub więcej identycznych znaków z rzędu (aaa, 111)'),
   field('Ważność hasła w dniach (0 = bez wygasania)', maxAge),
   field('Czas bezczynności sesji (minuty)', idle),
+  field('Błędne logowania do blokady konta na 15 minut', maxAttempts),
   h('button', { type: 'submit' }, 'Zapisz ustawienia'), msg);
 }
 
