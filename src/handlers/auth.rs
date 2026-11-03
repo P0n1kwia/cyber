@@ -24,9 +24,28 @@ pub struct LoginReq {
     password: String,
 }
 
+fn account_locked(secs_left: i64) -> AppError {
+    AppError::too_many_requests(
+        "account_locked",
+        format!(
+            "Konto jest zablokowane po zbyt wielu błędnych próbach. Spróbuj ponownie za {}:{:02}.",
+            secs_left / 60,
+            secs_left % 60
+        ),
+    )
+    .with_extra(json!({ "retry_after_secs": secs_left }))
+}
+
 /// POST /api/login – identyfikacja (login) i uwierzytelnienie (hasło).
 pub async fn login(State(st): State<AppState>, Json(req): Json<LoginReq>) -> AppResult<Response> {
     let user = db::find_user_by_username(&st.conn(), req.username.trim())?;
+    let user_id = user.as_ref().map(|u| u.id);
+    let t = now();
+
+    // Konto zablokowane po zbyt wielu błędnych próbach: nie sprawdzamy hasła, podajemy czas do końca blokady.
+    if let Some(u) = user.as_ref().filter(|u| u.locked_until > t) {
+        return Err(account_locked(u.locked_until - t));
+    }
 
     let password_ok = match &user {
         Some(u) => password::verify_async(req.password, u.password_hash.clone()).await,
@@ -35,11 +54,24 @@ pub async fn login(State(st): State<AppState>, Json(req): Json<LoginReq>) -> App
 
     // Ten sam komunikat dla nieistniejącego loginu i błędnego hasła.
     let Some(user) = user.filter(|_| password_ok) else {
+        // Błędne hasło do istniejącego konta wlicza się do limitu prób.
+        if let Some(id) = user_id {
+            let conn = st.conn();
+            let max_attempts = settings::load(&conn)?.max_login_attempts;
+            let locked_until = db::register_failed_login(&conn, id, max_attempts, t)?;
+            if locked_until > t {
+                return Err(account_locked(locked_until - t));
+            }
+        }
         return Err(AppError::unauthorized(
             "invalid_credentials",
             "Login lub hasło niepoprawne",
         ));
     };
+
+    if user.failed_attempts > 0 {
+        db::reset_failed_logins(&st.conn(), user.id)?;
+    }
 
     // Poniższe komunikaty zobaczy tylko ktoś, kto podał poprawne hasło.
     if user.is_blocked {
@@ -48,7 +80,6 @@ pub async fn login(State(st): State<AppState>, Json(req): Json<LoginReq>) -> App
             "Konto jest zablokowane. Skontaktuj się z administratorem.",
         ));
     }
-    let t = now();
     if user.one_time_expires_at.is_some_and(|expires| t > expires) {
         return Err(AppError::forbidden(
             "one_time_expired",

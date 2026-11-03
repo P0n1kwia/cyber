@@ -89,11 +89,13 @@ pub struct User {
     pub totp_secret: Option<String>,
     pub totp_enabled: bool,
     pub totp_last_step: i64,
+    pub failed_attempts: i64,
+    pub locked_until: i64,
 }
 
 pub const USER_COLS: &str = "id, username, full_name, role, password_hash, password_changed_at, \
     must_change_password, one_time_expires_at, is_blocked, is_builtin, totp_secret, \
-    totp_enabled, totp_last_step";
+    totp_enabled, totp_last_step, failed_attempts, locked_until";
 
 impl User {
     pub fn from_row(r: &Row<'_>) -> rusqlite::Result<User> {
@@ -114,6 +116,8 @@ impl User {
             totp_secret: r.get(10)?,
             totp_enabled: r.get(11)?,
             totp_last_step: r.get(12)?,
+            failed_attempts: r.get(13)?,
+            locked_until: r.get(14)?,
         })
     }
 

@@ -13,6 +13,13 @@ pub struct Settings {
     pub password_max_age_days: u32,
     /// Czas bezczynności, po którym sesja wygasa (w minutach).
     pub session_idle_minutes: u32,
+    /// Liczba błędnych logowań, po której konto jest blokowane na 15 minut.
+    #[serde(default = "default_max_login_attempts")]
+    pub max_login_attempts: u32,
+}
+
+fn default_max_login_attempts() -> u32 {
+    5
 }
 
 impl Default for Settings {
@@ -22,6 +29,7 @@ impl Default for Settings {
             forbid_repeats: false,
             password_max_age_days: 0,
             session_idle_minutes: 15,
+            max_login_attempts: default_max_login_attempts(),
         }
     }
 }
@@ -38,6 +46,9 @@ impl Settings {
         }
         if !(1..=1440).contains(&self.session_idle_minutes) {
             errs.push("Czas bezczynności sesji: 1–1440 minut.");
+        }
+        if !(1..=20).contains(&self.max_login_attempts) {
+            errs.push("Liczba prób logowania do blokady: 1–20.");
         }
         errs
     }
@@ -60,6 +71,7 @@ pub fn load(conn: &Connection) -> rusqlite::Result<Settings> {
             .unwrap_or(d.forbid_repeats),
         password_max_age_days: num("password_max_age_days", d.password_max_age_days),
         session_idle_minutes: num("session_idle_minutes", d.session_idle_minutes),
+        max_login_attempts: num("max_login_attempts", d.max_login_attempts),
     })
 }
 
@@ -72,6 +84,7 @@ pub fn save(conn: &Connection, s: &Settings) -> rusqlite::Result<()> {
         ),
         ("password_max_age_days", s.password_max_age_days.to_string()),
         ("session_idle_minutes", s.session_idle_minutes.to_string()),
+        ("max_login_attempts", s.max_login_attempts.to_string()),
     ];
     for (key, value) in pairs {
         conn.execute(

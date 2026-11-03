@@ -15,7 +15,9 @@ CREATE TABLE IF NOT EXISTS users (
     is_builtin            INTEGER NOT NULL DEFAULT 0, -- stałe konto ADMIN
     totp_secret           TEXT,
     totp_enabled          INTEGER NOT NULL DEFAULT 0,
-    totp_last_step        INTEGER NOT NULL DEFAULT 0
+    totp_last_step        INTEGER NOT NULL DEFAULT 0,
+    failed_attempts       INTEGER NOT NULL DEFAULT 0, -- kolejne błędne logowania (zerowane po sukcesie lub blokadzie)
+    locked_until          INTEGER NOT NULL DEFAULT 0  -- do kiedy konto jest zablokowane czasowo (unix, 0 = nie)
 );
 
 CREATE TABLE IF NOT EXISTS password_history (
@@ -135,6 +137,36 @@ fn add_history(conn: &Connection, user_id: i64, hash: &str) -> rusqlite::Result<
     conn.execute(
         "INSERT INTO password_history (user_id, password_hash) VALUES (?1, ?2)",
         params![user_id, hash],
+    )?;
+    Ok(())
+}
+
+/// Czas blokady konta po przekroczeniu limitu błędnych logowań.
+pub const LOCKOUT_SECS: i64 = 15 * 60;
+
+/// Zlicza błędne logowanie. Po `max_attempts` błędach blokuje konto na `LOCKOUT_SECS`
+/// i zeruje licznik (po wygaśnięciu blokady użytkownik ma znów pełny limit prób).
+/// Zwraca `locked_until` po aktualizacji – jeśli jest w przyszłości, konto jest zablokowane.
+pub fn register_failed_login(
+    conn: &Connection,
+    user_id: i64,
+    max_attempts: u32,
+    now: i64,
+) -> rusqlite::Result<i64> {
+    conn.execute(
+        "UPDATE users SET \
+           locked_until    = CASE WHEN failed_attempts + 1 >= ?2 THEN ?3 ELSE locked_until END, \
+           failed_attempts = CASE WHEN failed_attempts + 1 >= ?2 THEN 0 ELSE failed_attempts + 1 END \
+         WHERE id = ?1",
+        params![user_id, max_attempts, now + LOCKOUT_SECS],
+    )?;
+    conn.query_row("SELECT locked_until FROM users WHERE id = ?1", [user_id], |r| r.get(0))
+}
+
+pub fn reset_failed_logins(conn: &Connection, user_id: i64) -> rusqlite::Result<()> {
+    conn.execute(
+        "UPDATE users SET failed_attempts = 0, locked_until = 0 WHERE id = ?1",
+        [user_id],
     )?;
     Ok(())
 }
