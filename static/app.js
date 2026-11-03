@@ -76,11 +76,15 @@ function renderLogin(notice) {
   const username = h('input', { autocomplete: 'username', required: true });
   const password = h('input', { type: 'password', autocomplete: 'current-password', required: true });
   const submit = h('button', { type: 'submit' }, 'Zaloguj');
+  // Pole-pułapka: ukryte przed użytkownikiem i czytnikami ekranu, bot wypełnia je automatycznie.
+  const honeypot = h('input', { name: 'website', tabindex: '-1', autocomplete: 'off' });
   app.replaceChildren(h('form', {
     class: 'auth',
     onsubmit: async (e) => {
       e.preventDefault();
-      const r = await api('POST', '/login', { username: username.value, password: password.value });
+      const r = await api('POST', '/login', {
+        username: username.value, password: password.value, website: honeypot.value,
+      });
       password.value = '';
       if (r.data.error === 'account_locked') return lockCountdown(msg, submit, r.data.retry_after_secs);
       if (!r.ok) return show(msg, 'error', errBox(r));
@@ -88,6 +92,7 @@ function renderLogin(notice) {
       enterApp();
     },
   }, h('h1', {}, 'AuthLab'), field('Login', username), field('Hasło', password),
+  h('div', { class: 'hp', 'aria-hidden': 'true' }, field('Website', honeypot)),
   submit, msg));
   username.focus();
 }

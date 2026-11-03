@@ -111,6 +111,7 @@ button.tab.active, button.tab.active:hover:not(:disabled) { color: var(--ink); b
 /* ---- logowanie i wymuszona zmiana hasła ------------------------------------- */
 
 .auth { max-width: 22rem; margin-top: 12vh; }
+.hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 .auth > p { margin: -.75rem 0 1.75rem; color: var(--muted); }
 
 /* ---- sekcje: nagłówek po lewej, treść po prawej ------------------------------- */

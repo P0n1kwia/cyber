@@ -22,6 +22,9 @@ use serde_json::{Value, json};
 pub struct LoginReq {
     username: String,
     password: String,
+    /// Pole-pułapka człowiek go nie widzi, więc zostaje puste; bot je wypełnia.
+    #[serde(default)]
+    website: String,
 }
 
 fn account_locked(secs_left: i64) -> AppError {
@@ -38,6 +41,15 @@ fn account_locked(secs_left: i64) -> AppError {
 
 /// POST /api/login – identyfikacja (login) i uwierzytelnienie (hasło).
 pub async fn login(State(st): State<AppState>, Json(req): Json<LoginReq>) -> AppResult<Response> {
+    // Wypełnione pole-pułapka = bot. Odrzucamy przed jakąkolwiek weryfikacją i nie zliczamy próby na koncie.
+    if !req.website.trim().is_empty() {
+        eprintln!("honeypot: wypełnione ukryte pole przy logowaniu na „{}”", req.username.trim());
+        return Err(AppError::forbidden(
+            "bot_detected",
+            "Wykryto automatyczne żądanie. Logowanie odrzucone.",
+        ));
+    }
+
     let user = db::find_user_by_username(&st.conn(), req.username.trim())?;
     let user_id = user.as_ref().map(|u| u.id);
     let t = now();
