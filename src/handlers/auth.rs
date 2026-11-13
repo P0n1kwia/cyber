@@ -1,5 +1,5 @@
 use crate::{
-    db,
+    canary, db,
     error::{AppError, AppResult},
     models::now,
     password, policy,
@@ -44,6 +44,10 @@ fn account_locked(secs_left: i64) -> AppError {
 
 /// POST /api/login – identyfikacja (login) i uwierzytelnienie (hasło).
 pub async fn login(State(st): State<AppState>, Json(req): Json<LoginReq>) -> AppResult<Response> {
+    if req.username.trim().eq_ignore_ascii_case(canary::TRAP_USERNAME) {
+        canary::trap_triggered(req.username.trim());
+    }
+
     // Wypełnione pole-pułapka = bot. Odrzucamy przed jakąkolwiek weryfikacją i nie zliczamy próby na koncie.
     if !req.website.trim().is_empty() {
         eprintln!("honeypot: wypełnione ukryte pole przy logowaniu na „{}”", req.username.trim());

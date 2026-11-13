@@ -1,5 +1,5 @@
 use crate::{
-    db,
+    canary, db,
     models::{Role, now},
     password::{self, OTP_VALIDITY_SECS},
 };
@@ -29,8 +29,28 @@ pub fn ensure_admin(conn: &Connection) -> Result<Option<String>, String> {
     Ok(Some(one_time))
 }
 
-/// Tworzy 5 użytkowników testowych; zwraca (login, rola, hasło jednorazowe) dla nowo
-/// utworzonych. Istniejące konta są pomijane.
+
+pub fn ensure_trap_account(conn: &Connection) -> Result<(), String> {
+    if db::find_user_by_username(conn, canary::TRAP_USERNAME)
+        .map_err(|e| e.to_string())?
+        .is_some()
+    {
+        return Ok(());
+    }
+    let hash = password::hash(&password::random_token())?;
+    db::insert_user(
+        conn,
+        canary::TRAP_USERNAME,
+        "Konto serwisowe (kopie zapasowe)",
+        Role::Czytelnik,
+        &hash,
+        now() + OTP_VALIDITY_SECS,
+        false,
+    )
+    .map_err(|e| e.to_string())?;
+    Ok(())
+}
+ /// 5 przykładowych kont 
 pub fn seed_test_users(conn: &Connection) -> Result<Vec<(String, Role, String)>, String> {
     const USERS: [(&str, &str, Role); 5] = [
         ("redaktor1", "Jan Kowalski", Role::Redaktor),

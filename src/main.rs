@@ -22,6 +22,7 @@ async fn main() {
     if let Some(one_time) = bootstrap::ensure_admin(&conn).unwrap_or_else(|e| fail(e)) {
         println!("Utworzono konto ADMIN, hasło jednorazowe: {one_time} (ważne 24 h)");
     }
+    bootstrap::ensure_trap_account(&conn).unwrap_or_else(|e| fail(e));
 
     if command == "seed" {
         let created = bootstrap::seed_test_users(&conn).unwrap_or_else(|e| fail(e));

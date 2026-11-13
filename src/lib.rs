@@ -1,6 +1,7 @@
 
 
 pub mod bootstrap;
+pub mod canary;
 pub mod captcha;
 pub mod db;
 pub mod error;
