@@ -25,6 +25,9 @@ pub struct LoginReq {
     /// Pole-pułapka człowiek go nie widzi, więc zostaje puste; bot je wypełnia.
     #[serde(default)]
     website: String,
+    /// Token z widżetu reCAPTCHA; brak tokenu kończy się odrzuceniem (`captcha_failed`).
+    #[serde(default)]
+    captcha_token: String,
 }
 
 fn account_locked(secs_left: i64) -> AppError {
@@ -49,6 +52,9 @@ pub async fn login(State(st): State<AppState>, Json(req): Json<LoginReq>) -> App
             "Wykryto automatyczne żądanie. Logowanie odrzucone.",
         ));
     }
+
+    // CAPTCHA przed blokadą i hasłem: bot bez tokenu nie sprawdza haseł ani nie liczy hashy Argon2.
+    st.captcha().require(&req.captcha_token).await?;
 
     let user = db::find_user_by_username(&st.conn(), req.username.trim())?;
     let user_id = user.as_ref().map(|u| u.id);
