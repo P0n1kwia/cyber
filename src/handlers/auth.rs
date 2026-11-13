@@ -188,6 +188,11 @@ pub async fn login_totp(
     }
 }
 
+/// GET /api/captcha-config – klucz publiczny reCAPTCHA dla widżetu we frontendzie.
+pub async fn captcha_config(State(st): State<AppState>) -> Json<Value> {
+    Json(json!({ "site_key": st.captcha().site_key() }))
+}
+
 /// POST /api/logout – usuwa sesję z bazy, więc token przestaje działać.
 pub async fn logout(State(st): State<AppState>, headers: HeaderMap) -> AppResult<Response> {
     if let Some(token) = session::token_from_headers(&headers) {
@@ -219,6 +224,9 @@ pub struct ChangePasswordReq {
     old_password: String,
     new_password: String,
     new_password_confirm: String,
+    /// Token z widżetu reCAPTCHA; brak tokenu kończy się odrzuceniem (`captcha_failed`).
+    #[serde(default)]
+    captcha_token: String,
 }
 
 /// POST /api/change-password – zmiana hasła, także wymuszona przy pierwszym logowaniu.
@@ -229,6 +237,9 @@ pub async fn change_password(
     Json(req): Json<ChangePasswordReq>,
 ) -> AppResult<Json<Value>> {
     let user = auth.user;
+
+    // CAPTCHA najpierw: bot bez tokenu nie zmusi serwera do liczenia hashy Argon2.
+    st.captcha().require(&req.captcha_token).await?;
 
     if req.new_password != req.new_password_confirm {
         return Err(AppError::bad_request(

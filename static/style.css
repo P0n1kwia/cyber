@@ -49,6 +49,7 @@ input, select, textarea {
   border: 0; border-bottom: 1px solid var(--field); border-radius: 0;
 }
 label > input, label > select { margin-top: .1rem; }
+.captcha { margin: 0 0 1.25rem; min-height: 78px; }
 input[type=number] { max-width: 10rem; }
 input::placeholder, textarea::placeholder { color: #6b737c; }
 input:focus-visible, select:focus-visible {

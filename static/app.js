@@ -47,6 +47,34 @@ async function api(method, path, body) {
   return { ok: res.ok, status: res.status, data };
 }
 
+// ---- reCAPTCHA ---------------------------------------------------------------
+
+let recaptchaLoad;
+function loadRecaptcha() {
+  recaptchaLoad ??= new Promise((resolve, reject) => {
+    const script = h('script', { src: 'https://www.google.com/recaptcha/api.js?render=explicit', async: true });
+    script.onload = () => grecaptcha.ready(resolve);
+    script.onerror = () => { recaptchaLoad = null; reject(new Error('reCAPTCHA')); };
+    document.head.append(script);
+  });
+  return recaptchaLoad;
+}
+
+// Widżet reCAPTCHA: `el` wstawiamy do formularza, `token()` zwraca odpowiedź użytkownika,
+// `reset()` czyści widżet (token jest jednorazowy, więc po każdej próbie trzeba go odnowić).
+function captchaBox() {
+  const el = h('div', { class: 'captcha' });
+  let id = null;
+  Promise.all([loadRecaptcha(), api('GET', '/captcha-config')])
+    .then(([, cfg]) => { id = grecaptcha.render(el, { sitekey: cfg.data.site_key }); })
+    .catch(() => el.replaceChildren('Nie udało się załadować reCAPTCHA.'));
+  return {
+    el,
+    token: () => (id === null ? '' : grecaptcha.getResponse(id)),
+    reset: () => { if (id !== null) grecaptcha.reset(id); },
+  };
+}
+
 // ---- logowanie ---------------------------------------------------------------
 
 // Pokazuje pozostały czas blokady konta i odblokowuje przycisk, gdy blokada wygaśnie.
@@ -136,6 +164,7 @@ function passwordForm(onDone, forced) {
   const oldPassword = h('input', { type: 'password', autocomplete: 'current-password', required: true });
   const newPassword = h('input', { type: 'password', autocomplete: 'new-password', required: true });
   const confirm = h('input', { type: 'password', autocomplete: 'new-password', required: true });
+  const captcha = captchaBox();
   return h('form', {
     onsubmit: async (e) => {
       e.preventDefault();
@@ -143,7 +172,9 @@ function passwordForm(onDone, forced) {
         old_password: oldPassword.value,
         new_password: newPassword.value,
         new_password_confirm: confirm.value,
+        captcha_token: captcha.token(),
       });
+      captcha.reset();
       if (!r.ok) return show(msg, 'error', errBox(r));
       oldPassword.value = newPassword.value = confirm.value = '';
       show(msg, 'ok', 'Hasło zostało zmienione.');
@@ -151,7 +182,7 @@ function passwordForm(onDone, forced) {
     },
   }, field(forced ? 'Hasło jednorazowe (obecne)' : 'Obecne hasło', oldPassword),
   field('Nowe hasło', newPassword), field('Powtórz nowe hasło', confirm),
-  h('button', { type: 'submit' }, 'Zmień hasło'), msg);
+  captcha.el, h('button', { type: 'submit' }, 'Zmień hasło'), msg);
 }
 
 function renderForcedChange() {

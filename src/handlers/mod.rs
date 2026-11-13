@@ -41,6 +41,7 @@ pub fn router(state: AppState) -> Router {
         .route("/api/logout", post(auth::logout))
         .route("/api/me", get(auth::me))
         .route("/api/change-password", post(auth::change_password))
+        .route("/api/captcha-config", get(auth::captcha_config))
         // własne TOTP
         .route("/api/totp/setup", post(account::totp_setup))
         .route("/api/totp/enable", post(account::totp_enable))
