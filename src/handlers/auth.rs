@@ -10,13 +10,14 @@ use crate::{
 };
 use axum::{
     Json,
-    extract::State,
+    extract::{ConnectInfo, State},
     http::{HeaderMap, header},
     response::{IntoResponse, Response},
 };
 use rusqlite::OptionalExtension;
 use serde::Deserialize;
 use serde_json::{Value, json};
+use std::net::SocketAddr;
 
 #[derive(Deserialize)]
 pub struct LoginReq {
@@ -42,8 +43,27 @@ fn account_locked(secs_left: i64) -> AppError {
     .with_extra(json!({ "retry_after_secs": secs_left }))
 }
 
+fn ip_limited(secs_left: i64) -> AppError {
+    AppError::too_many_requests(
+        "ip_limited",
+        format!(
+            "Zbyt wiele nieudanych prób logowania z tego adresu. Spróbuj ponownie za {}:{:02}.",
+            secs_left / 60,
+            secs_left % 60
+        ),
+    )
+    .with_extra(json!({ "retry_after_secs": secs_left }))
+}
+
 /// POST /api/login – identyfikacja (login) i uwierzytelnienie (hasło).
-pub async fn login(State(st): State<AppState>, Json(req): Json<LoginReq>) -> AppResult<Response> {
+pub async fn login(
+    State(st): State<AppState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Json(req): Json<LoginReq>,
+) -> AppResult<Response> {
+    // Adres bierzemy z połączenia, a nie z nagłówków (X-Forwarded-For można podrobić).
+    let ip = addr.ip().to_canonical();
+
     if req.username.trim().eq_ignore_ascii_case(canary::TRAP_USERNAME) {
         canary::trap_triggered(req.username.trim());
     }
@@ -55,6 +75,11 @@ pub async fn login(State(st): State<AppState>, Json(req): Json<LoginReq>) -> App
             "bot_detected",
             "Wykryto automatyczne żądanie. Logowanie odrzucone.",
         ));
+    }
+
+    
+    if let Some(secs_left) = st.ip_limiter().blocked_for(ip, now()) {
+        return Err(ip_limited(secs_left));
     }
 
     // CAPTCHA przed blokadą i hasłem: bot bez tokenu nie sprawdza haseł ani nie liczy hashy Argon2.
@@ -76,7 +101,9 @@ pub async fn login(State(st): State<AppState>, Json(req): Json<LoginReq>) -> App
 
     // Ten sam komunikat dla nieistniejącego loginu i błędnego hasła.
     let Some(user) = user.filter(|_| password_ok) else {
-        // Błędne hasło do istniejącego konta wlicza się do limitu prób.
+        // Każde błędne logowanie (także na nieistniejący login) wlicza się do limitu adresu IP.
+        st.ip_limiter().record_failure(ip, t);
+        // Błędne hasło do istniejącego konta wlicza się do limitu prób konta.
         if let Some(id) = user_id {
             let conn = st.conn();
             let max_attempts = settings::load(&conn)?.max_login_attempts;

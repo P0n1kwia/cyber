@@ -43,5 +43,11 @@ async fn main() {
         .await
         .unwrap_or_else(|e| fail(format!("nie można nasłuchiwać na {ADDR}: {e}")));
     println!("Serwer działa: http://{ADDR}");
-    axum::serve(listener, app).await.unwrap_or_else(|e| fail(e));
+    // Adres klienta (ConnectInfo) potrzebny do limitu prób logowania z jednego IP.
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .await
+    .unwrap_or_else(|e| fail(e));
 }

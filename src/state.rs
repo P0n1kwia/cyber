@@ -1,4 +1,4 @@
-use crate::captcha::Captcha;
+use crate::{captcha::Captcha, ip_limit::IpLimiter};
 use rusqlite::Connection;
 use std::sync::{Arc, Mutex, MutexGuard};
 
@@ -6,6 +6,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 pub struct AppState {
     db: Arc<Mutex<Connection>>,
     captcha: Arc<Captcha>,
+    ip_limiter: Arc<IpLimiter>,
 }
 
 impl AppState {
@@ -13,12 +14,17 @@ impl AppState {
         AppState {
             db: Arc::new(Mutex::new(conn)),
             captcha: Arc::new(Captcha::from_env()),
+            ip_limiter: Arc::new(IpLimiter::default()),
         }
     }
 
 
     pub fn captcha(&self) -> &Captcha {
         &self.captcha
+    }
+
+    pub fn ip_limiter(&self) -> &IpLimiter {
+        &self.ip_limiter
     }
 
     pub fn conn(&self) -> MutexGuard<'_, Connection> {

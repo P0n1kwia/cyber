@@ -6,6 +6,7 @@ pub mod captcha;
 pub mod db;
 pub mod error;
 pub mod handlers;
+pub mod ip_limit;
 pub mod models;
 pub mod password;
 pub mod policy;
