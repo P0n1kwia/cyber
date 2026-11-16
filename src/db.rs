@@ -60,7 +60,26 @@ pub fn open_in_memory() -> rusqlite::Result<Connection> {
 fn init(conn: Connection) -> rusqlite::Result<Connection> {
     conn.pragma_update(None, "foreign_keys", "ON")?; // bez tego SQLite ignoruje ON DELETE CASCADE
     conn.execute_batch(SCHEMA)?;
+    migrate(&conn)?;
     Ok(conn)
+}
+
+const USERS_ADDED_COLUMNS: &[(&str, &str)] = &[
+    ("failed_attempts", "INTEGER NOT NULL DEFAULT 0"),
+    ("locked_until", "INTEGER NOT NULL DEFAULT 0"),
+];
+
+fn migrate(conn: &Connection) -> rusqlite::Result<()> {
+    let existing: Vec<String> = conn
+        .prepare("SELECT name FROM pragma_table_info('users')")?
+        .query_map([], |r| r.get(0))?
+        .collect::<rusqlite::Result<_>>()?;
+    for (name, definition) in USERS_ADDED_COLUMNS {
+        if !existing.iter().any(|c| c == name) {
+            conn.execute(&format!("ALTER TABLE users ADD COLUMN {name} {definition}"), [])?;
+        }
+    }
+    Ok(())
 }
 
 pub fn find_user_by_username(conn: &Connection, username: &str) -> rusqlite::Result<Option<User>> {
